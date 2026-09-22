@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JoelDiMatibag — Training Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            red: '#e5383b',
+                            redDark: '#ba181b',
+                            redLight: '#ff4d4d',
+                            bg: '#121214',
+                            card: '#1a1a1e',
+                            cardHover: '#222228',
+                            border: '#2a2a32',
+                            borderLight: '#3f3f4e',
+                            textMuted: '#8f8f9d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #0f0f11;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom scrollbar for matrix table overflow */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #141417;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d2d38;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #e5383b;
+        }
+
+        /* Checkbox box animation */
+        .hit-box {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hit-box.active {
+            background-color: #e5383b;
+            border-color: #ff4d4d;
+            box-shadow: 0 0 10px rgba(229, 56, 59, 0.4);
+        }
+
+        /* Table sticky headers */
+        .sticky-col-1 {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background-color: #1a1a1e;
+        }
+
+        /* Fixed symmetric table layout */
+        .table-symmetric {
+            table-layout: fixed;
+            width: 100%;
+        }
+
+        /* Lift Input styling inside matrix */
+        .lift-input {
+            background: transparent;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: #f3f4f6;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+        .lift-input:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: #3f3f4e;
+        }
+        .lift-input:focus {
+            background: #121214;
+            border-color: #e5383b;
+            box-shadow: 0 0 0 1px #e5383b;
+        }
+        
+        /* Remove arrows from number inputs */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16 flex flex-col items-center select-none">
+
+    <div class="w-full max-w-5xl px-3 sm:px-6 pt-6 pb-8">
+        
+        <!-- TOP HEADER -->
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3 border-b border-brand-border/60 pb-5">
+            <div class="flex items-center gap-2">
+                <h1 class="text-3xl sm:text-4xl font-black tracking-wider uppercase flex items-center">
+                    <span class="text-white">Joel</span>
+                    <span class="text-gray-400">-Di</span>
+                    <span class="text-brand-red">-MATIBAG</span>
+                </h1>
+            </div>
+            <div class="text-center sm:text-right">
+                <div class="text-xs sm:text-sm font-semibold text-gray-300" id="cycleDates">Sep 26 – Oct 26, 2026</div>
+                <div class="text-xs text-brand-textMuted uppercase tracking-widest font-medium">31-day cycle</div>
+            </div>
+        </header>
+
+        <!-- TOP METRICS SUMMARY CARDS -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+            <!-- Days Trained -->
+            <div class="bg-brand-card border border-brand-border rounded-xl p-3 sm:p-4 text-center shadow-lg relative overflow-hidden group">
+                <div class="text-2xl sm:text-4xl font-black text-brand-red mb-1 transition-transform group-hover:scale-105" id="statDaysTrained">0</div>
+                <div class="text-[10px] sm:text-xs font-bold text-brand-textMuted tracking-wider uppercase">Days Trained</div>
+            </div>
+            <!-- Day Streak -->
+            <div class="bg-brand-card border border-brand-border rounded-xl p-3 sm:p-4 text-center shadow-lg relative overflow-hidden group">
+                <div class="text-2xl sm:text-4xl font-black text-white mb-1 transition-transform group-hover:scale-105" id="statDayStreak">0</div>
+                <div class="text-[10px] sm:text-xs font-bold text-brand-textMuted tracking-wider uppercase">Day Streak</div>
+            </div>
+            <!-- Top Target -->
+            <div class="bg-brand-card border border-brand-border rounded-xl p-3 sm:p-4 text-center shadow-lg relative overflow-hidden group">
+                <div class="text-xl sm:text-4xl font-black text-white mb-1 truncate transition-transform group-hover:scale-105" id="statTopTarget">—</div>
+                <div class="text-[10px] sm:text-xs font-bold text-brand-textMuted tracking-wider uppercase" id="statTopTargetLabel">TOP: TARGET</div>
+            </div>
+        </div>
+
+        <!-- VIEW SWITCHER TABS -->
+        <div class="bg-brand-card p-1.5 rounded-xl border border-brand-border flex mb-6 shadow-inner">
+            <button id="btnTabDailyHits" onclick="switchView('daily')" class="flex-1 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-brand-red text-white shadow-md">
+                Daily Hits
+            </button>
+            <button id="btnTabMajorLifts" onclick="switchView('lifts')" class="flex-1 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-200 text-brand-textMuted hover:text-white">
+                Major Lifts
+            </button>
+        </div>
+
+        <!-- VIEW 1: DAILY HITS -->
+        <div id="viewDailyHits" class="space-y-3">
+            <div class="flex justify-between items-baseline px-1">
+                <h2 class="text-lg font-bold uppercase tracking-wide text-white">Daily Hits</h2>
+                <span class="text-xs text-brand-textMuted italic">tap to mark a muscle trained</span>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden shadow-2xl">
+                <div class="overflow-x-auto max-h-[620px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse min-w-[700px] table-symmetric">
+                        <thead>
+                            <tr class="bg-[#151518] border-b border-brand-border text-[11px] font-bold uppercase tracking-wider text-brand-textMuted sticky top-0 z-30 shadow-md">
+                                <th class="p-3 w-28 text-left sticky-col-1 bg-[#151518] border-r border-brand-border/40">Day</th>
+                                <th class="p-3 text-center w-20">Chest</th>
+                                <th class="p-3 text-center w-20">Back</th>
+                                <th class="p-3 text-center w-20">Legs</th>
+                                <th class="p-3 text-center w-20">Shoulder</th>
+                                <th class="p-3 text-center w-20">Arms</th>
+                                <th class="p-3 text-center w-20">Triceps</th>
+                                <th class="p-3 text-center w-20">Biceps</th>
+                                <th class="p-3 text-center w-20">Abs</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dailyHitsBody" class="divide-y divide-brand-border/30 text-xs">
+                            <!-- Rows dynamically populated by JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-[#141417] border-t-2 border-brand-border font-bold text-xs uppercase tracking-wider sticky bottom-0 z-20 shadow-lg">
+                                <td class="p-3 text-left sticky-col-1 bg-[#141417] text-white border-r border-brand-border/40">Total Hit</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totHits-chest">0</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totHits-back">0</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totHits-legs">0</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totHits-shoulders">0</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totHits-arms">0</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totHits-triceps">0</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totHits-biceps">0</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totHits-abs">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: MAJOR LIFTS -->
+        <div id="viewMajorLifts" class="space-y-4 hidden">
+            <div class="flex justify-between items-baseline px-1">
+                <h2 class="text-lg font-bold uppercase tracking-wide text-white">Major Lifts</h2>
+                <span class="text-xs text-brand-textMuted italic">weight in kg</span>
+            </div>
+
+            <!-- Major Lift PR Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-brand-card border border-brand-border p-3 rounded-xl relative overflow-hidden shadow-md">
+                    <div class="text-[11px] font-bold uppercase text-brand-textMuted tracking-wider mb-1">Bench Press</div>
+                    <div class="text-xl sm:text-2xl font-black text-brand-red" id="cardPrBench">0 <span class="text-xs font-normal text-gray-400">kg</span></div>
+                    <div class="text-[10px] text-brand-textMuted mt-0.5" id="cardSubBench">No lifts yet</div>
+                </div>
+                <div class="bg-brand-card border border-brand-border p-3 rounded-xl relative overflow-hidden shadow-md">
+                    <div class="text-[11px] font-bold uppercase text-brand-textMuted tracking-wider mb-1">Squat</div>
+                    <div class="text-xl sm:text-2xl font-black text-brand-red" id="cardPrSquat">0 <span class="text-xs font-normal text-gray-400">kg</span></div>
+                    <div class="text-[10px] text-brand-textMuted mt-0.5" id="cardSubSquat">No lifts yet</div>
+                </div>
+                <div class="bg-brand-card border border-brand-border p-3 rounded-xl relative overflow-hidden shadow-md">
+                    <div class="text-[11px] font-bold uppercase text-brand-textMuted tracking-wider mb-1">Lat Pulldown</div>
+                    <div class="text-xl sm:text-2xl font-black text-brand-red" id="cardPrLat">0 <span class="text-xs font-normal text-gray-400">kg</span></div>
+                    <div class="text-[10px] text-brand-textMuted mt-0.5" id="cardSubLat">No lifts yet</div>
+                </div>
+                <div class="bg-brand-card border border-brand-border p-3 rounded-xl relative overflow-hidden shadow-md">
+                    <div class="text-[11px] font-bold uppercase text-brand-textMuted tracking-wider mb-1">Deadlift</div>
+                    <div class="text-xl sm:text-2xl font-black text-brand-red" id="cardPrDeadlift">0 <span class="text-xs font-normal text-gray-400">kg</span></div>
+                    <div class="text-[10px] text-brand-textMuted mt-0.5" id="cardSubDeadlift">No lifts yet</div>
+                </div>
+            </div>
+
+            <!-- Major Lifts Table -->
+            <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden shadow-2xl">
+                <div class="overflow-x-auto max-h-[580px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse min-w-[550px] table-symmetric">
+                        <thead>
+                            <tr class="bg-[#151518] border-b border-brand-border text-[11px] font-bold uppercase tracking-wider text-brand-textMuted sticky top-0 z-30 shadow-md">
+                                <th class="p-3 w-32 text-left sticky-col-1 bg-[#151518] border-r border-brand-border/40">Day</th>
+                                <th class="p-3 text-center">Bench Press</th>
+                                <th class="p-3 text-center">Squat</th>
+                                <th class="p-3 text-center">Lat Pulldown</th>
+                                <th class="p-3 text-center">Deadlift</th>
+                            </tr>
+                        </thead>
+                        <tbody id="majorLiftsBody" class="divide-y divide-brand-border/30 text-xs">
+                            <!-- Rows dynamically populated by JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-[#141417] border-t-2 border-brand-border font-bold text-xs uppercase tracking-wider sticky bottom-0 z-20 shadow-lg">
+                                <td class="p-3 text-left sticky-col-1 bg-[#141417] text-white border-r border-brand-border/40">PR</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totPr-bench">—</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totPr-squat">—</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totPr-lat">—</td>
+                                <td class="p-3 text-center text-brand-red font-extrabold" id="totPr-deadlift">—</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESET ACTION CONTAINER -->
+        <div class="mt-8 text-center">
+            <button onclick="openResetModal()" class="px-6 py-2.5 rounded-full border border-brand-border hover:border-brand-red/60 text-xs font-bold uppercase tracking-widest text-brand-textMuted hover:text-white transition-all duration-200 bg-brand-card/50 hover:bg-brand-red/10">
+                Reset this cycle
+            </button>
+        </div>
+    </div>
+
+    <!-- CONFIRMATION MODAL -->
+    <div id="resetModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200 p-4">
+        <div class="bg-brand-card border border-brand-border rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl transform scale-95 transition-transform duration-200" id="resetModalContent">
+            <div class="w-12 h-12 rounded-full bg-brand-red/20 text-brand-red flex items-center justify-center mx-auto mb-4 border border-brand-red/30">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-wide">Reset Current Cycle?</h3>
+            <p class="text-xs text-brand-textMuted mb-6 leading-relaxed">This will clear all logged workout hits, weight logs, streaks, and PR records for this 31-day cycle. This action cannot be undone.</p>
+            <div class="flex gap-3">
+                <button onclick="closeResetModal()" class="flex-1 py-2.5 rounded-xl border border-brand-border text-xs font-bold uppercase tracking-wider text-gray-300 hover:bg-brand-border/40 transition">
+                    Cancel
+                </button>
+                <button onclick="confirmReset()" class="flex-1 py-2.5 rounded-xl bg-brand-red hover:bg-brand-redDark text-xs font-bold uppercase tracking-wider text-white shadow-lg transition">
+                    Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_DAYS = 31;
+        const MUSCLE_GROUPS = ['chest', 'back', 'legs', 'shoulders', 'arms', 'triceps', 'biceps', 'abs'];
+        const LIFT_KEYS = ['bench', 'squat', 'lat', 'deadlift'];
+        
+        // Days of week and month offset mapping starting from Tue Sep 22, 2026
+        const START_DATE = new Date(2026, 8, 26); // Sep 22, 2026
+        const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // App Data Object Structure
+        let appData = {
+            hits: {}, // dayIdx: { muscleKey: boolean }
+            lifts: {} // dayIdx: { liftKey: number }
+        };
+
+        // Initialize state on load
+        window.onload = function() {
+            loadLocalStorage();
+            renderDailyHitsTable();
+            renderMajorLiftsTable();
+            updateAllStats();
+        };
+
+        function loadLocalStorage() {
+            try {
+                const stored = localStorage.getItem('IRONLOG_CYCLE_DATA_V1');
+                if (stored) {
+                    appData = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("Could not load stored data:", e);
+            }
+        }
+
+        function saveLocalStorage() {
+            try {
+                localStorage.setItem('IRONLOG_CYCLE_DATA_V1', JSON.stringify(appData));
+            } catch (e) {
+                console.error("Could not save data:", e);
+            }
+        }
+
+        function getDayMetadata(dayIndex) {
+            const dateObj = new Date(START_DATE);
+            dateObj.setDate(START_DATE.getDate() + dayIndex);
+            
+            const dayOfWeek = DAYS_SHORT[dateObj.getDay()];
+            const month = MONTHS_SHORT[dateObj.getMonth()];
+            const dayNum = dateObj.getDate();
+
+            return {
+                label: `Day ${dayIndex + 1}`,
+                sub: `${dayOfWeek} ${month} ${dayNum}`
+            };
+        }
+
+        function switchView(view) {
+            const dailyBtn = document.getElementById('btnTabDailyHits');
+            const liftsBtn = document.getElementById('btnTabMajorLifts');
+            const dailyView = document.getElementById('viewDailyHits');
+            const liftsView = document.getElementById('viewMajorLifts');
+
+            if (view === 'daily') {
+                dailyBtn.className = "flex-1 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-brand-red text-white shadow-md";
+                liftsBtn.className = "flex-1 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-200 text-brand-textMuted hover:text-white";
+                dailyView.classList.remove('hidden');
+                liftsView.classList.add('hidden');
+            } else {
+                liftsBtn.className = "flex-1 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-brand-red text-white shadow-md";
+                dailyBtn.className = "flex-1 py-2.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-200 text-brand-textMuted hover:text-white";
+                liftsView.classList.remove('hidden');
+                dailyView.classList.add('hidden');
+            }
+        }
+
+        function renderDailyHitsTable() {
+            const tbody = document.getElementById('dailyHitsBody');
+            tbody.innerHTML = '';
+
+            for (let i = 0; i < TOTAL_DAYS; i++) {
+                const dayMeta = getDayMetadata(i);
+                const dayHits = appData.hits[i] || {};
+                const hasAnyHit = MUSCLE_GROUPS.some(m => dayHits[m]);
+
+                const tr = document.createElement('tr');
+                tr.className = `transition-colors hover:bg-brand-cardHover/60 ${hasAnyHit ? 'bg-brand-red/5' : ''}`;
+                tr.id = `daily-row-${i}`;
+
+                let html = `
+                    <td class="p-2.5 text-left sticky-col-1 border-r border-brand-border/40 font-medium">
+                        <div class="text-white font-bold text-xs">${dayMeta.label}</div>
+                        <div class="text-[10px] text-brand-textMuted leading-tight">${dayMeta.sub}</div>
+                    </td>
+                `;
+
+                MUSCLE_GROUPS.forEach(m => {
+                    const isChecked = !!dayHits[m];
+                    html += `
+                        <td class="p-2 text-center align-middle">
+                            <div class="flex items-center justify-center">
+                                <button 
+                                    onclick="toggleHit(${i}, '${m}')"
+                                    class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-brand-border flex items-center justify-center hit-box ${isChecked ? 'active' : 'bg-[#151518] text-transparent hover:border-brand-borderLight'}"
+                                    aria-label="Toggle ${m} on ${dayMeta.label}"
+                                >
+                                    <svg class="w-4 h-4 ${isChecked ? 'text-white' : 'opacity-0'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                });
+
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function renderMajorLiftsTable() {
+            const tbody = document.getElementById('majorLiftsBody');
+            tbody.innerHTML = '';
+
+            for (let i = 0; i < TOTAL_DAYS; i++) {
+                const dayMeta = getDayMetadata(i);
+                const dayLifts = appData.lifts[i] || {};
+
+                const tr = document.createElement('tr');
+                tr.className = 'transition-colors hover:bg-brand-cardHover/60';
+
+                let html = `
+                    <td class="p-2.5 text-left sticky-col-1 border-r border-brand-border/40 font-medium">
+                        <div class="text-white font-bold text-xs">${dayMeta.label}</div>
+                        <div class="text-[10px] text-brand-textMuted leading-tight">${dayMeta.sub}</div>
+                    </td>
+                `;
+
+                LIFT_KEYS.forEach(liftKey => {
+                    const val = dayLifts[liftKey] !== undefined ? dayLifts[liftKey] : '';
+                    html += `
+                        <td class="p-1.5 text-center align-middle h-11">
+                            <div class="flex items-center justify-center h-full w-full max-w-[100px] mx-auto">
+                                <input 
+                                    type="number" 
+                                    min="0" 
+                                    max="999" 
+                                    step="0.5"
+                                    placeholder="—" 
+                                    value="${val}"
+                                    oninput="onLiftInputChange(${i}, '${liftKey}', this.value)"
+                                    class="lift-input text-xs sm:text-sm font-semibold py-1 px-2"
+                                />
+                            </div>
+                        </td>
+                    `;
+                });
+
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function renderMajorLiftsTable() {
+            const tbody = document.getElementById('majorLiftsBody');
+            tbody.innerHTML = '';
+
+            for (let i = 0; i < TOTAL_DAYS; i++) {
+                const dayMeta = getDayMetadata(i);
+                const dayLifts = appData.lifts[i] || {};
+
+                const tr = document.createElement('tr');
+                tr.className = 'transition-colors hover:bg-brand-cardHover/60';
+
+                let html = `
+                    <td class="p-2.5 sticky-col-1 border-r border-brand-border/40 font-medium">
+                        <div class="text-white font-bold text-xs">${dayMeta.label}</div>
+                        <div class="text-[10px] text-brand-textMuted leading-tight">${dayMeta.sub}</div>
+                    </td>
+                `;
+
+                LIFT_KEYS.forEach(liftKey => {
+                    const val = dayLifts[liftKey] !== undefined ? dayLifts[liftKey] : '';
+                    html += `
+                        <td class="p-1.5 text-center align-middle h-11">
+                            <input 
+                                type="number" 
+                                min="0" 
+                                max="999" 
+                                step="0.5"
+                                placeholder="—" 
+                                value="${val}"
+                                oninput="onLiftInputChange(${i}, '${liftKey}', this.value)"
+                                class="lift-input text-xs sm:text-sm font-semibold"
+                            />
+                        </td>
+                    `;
+                });
+
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function toggleHit(dayIndex, muscleKey) {
+            if (!appData.hits[dayIndex]) {
+                appData.hits[dayIndex] = {};
+            }
+            appData.hits[dayIndex][muscleKey] = !appData.hits[dayIndex][muscleKey];
+            
+            saveLocalStorage();
+            renderDailyHitsTable();
+            updateAllStats();
+        }
+
+        function onLiftInputChange(dayIndex, liftKey, value) {
+            if (!appData.lifts[dayIndex]) {
+                appData.lifts[dayIndex] = {};
+            }
+
+            if (value === '' || isNaN(value)) {
+                delete appData.lifts[dayIndex][liftKey];
+            } else {
+                appData.lifts[dayIndex][liftKey] = parseFloat(value);
+            }
+
+            saveLocalStorage();
+            updateAllStats();
+        }
+
+        function updateAllStats() {
+            // 1. Calculate Muscle Totals
+            const muscleTotals = {};
+            MUSCLE_GROUPS.forEach(m => muscleTotals[m] = 0);
+
+            let uniqueDaysTrained = new Set();
+
+            for (let i = 0; i < TOTAL_DAYS; i++) {
+                const dayHits = appData.hits[i] || {};
+                let dayHasHit = false;
+
+                MUSCLE_GROUPS.forEach(m => {
+                    if (dayHits[m]) {
+                        muscleTotals[m]++;
+                        dayHasHit = true;
+                    }
+                });
+
+                // Check if lift was logged for unique day count
+                const dayLifts = appData.lifts[i] || {};
+                const dayHasLift = LIFT_KEYS.some(k => dayLifts[k] !== undefined && dayLifts[k] > 0);
+
+                if (dayHasHit || dayHasLift) {
+                    uniqueDaysTrained.add(i);
+                }
+            }
+
+            // Update Total Hits Footer
+            MUSCLE_GROUPS.forEach(m => {
+                const el = document.getElementById(`totHits-${m}`);
+                if (el) el.innerText = muscleTotals[m];
+            });
+
+            // 2. Days Trained Summary Card
+            const daysTrainedCount = uniqueDaysTrained.size;
+            document.getElementById('statDaysTrained').innerText = daysTrainedCount;
+
+            // 3. Streak Calculation
+            let currentStreak = 0;
+            let maxStreak = 0;
+            for (let i = 0; i < TOTAL_DAYS; i++) {
+                if (uniqueDaysTrained.has(i)) {
+                    currentStreak++;
+                    if (currentStreak > maxStreak) maxStreak = currentStreak;
+                } else {
+                    currentStreak = 0;
+                }
+            }
+            document.getElementById('statDayStreak').innerText = maxStreak;
+
+            // 4. Top Muscle Target Calculation
+            let topMuscle = '—';
+            let maxHits = 0;
+            MUSCLE_GROUPS.forEach(m => {
+                if (muscleTotals[m] > maxHits) {
+                    maxHits = muscleTotals[m];
+                    topMuscle = m.toUpperCase();
+                }
+            });
+            document.getElementById('statTopTarget').innerText = topMuscle;
+            document.getElementById('statTopTargetLabel').innerText = maxHits > 0 ? `TOP: ${topMuscle}` : 'TOP TARGET';
+
+            // 5. Calculate Personal Records (PRs) for Major Lifts
+            const prs = { bench: 0, squat: 0, lat: 0, deadlift: 0 };
+
+            for (let i = 0; i < TOTAL_DAYS; i++) {
+                const dayLifts = appData.lifts[i] || {};
+                LIFT_KEYS.forEach(k => {
+                    if (dayLifts[k] !== undefined && dayLifts[k] > prs[k]) {
+                        prs[k] = dayLifts[k];
+                    }
+                });
+            }
+
+            // Update PR Footer & Summary Cards
+            const cardMap = {
+                bench: { pr: 'cardPrBench', sub: 'cardSubBench', footer: 'totPr-bench', name: 'Bench Press' },
+                squat: { pr: 'cardPrSquat', sub: 'cardSubSquat', footer: 'totPr-squat', name: 'Squat' },
+                lat: { pr: 'cardPrLat', sub: 'cardSubLat', footer: 'totPr-lat', name: 'Lat Pulldown' },
+                deadlift: { pr: 'cardPrDeadlift', sub: 'cardSubDeadlift', footer: 'totPr-deadlift', name: 'Deadlift' }
+            };
+
+            LIFT_KEYS.forEach(k => {
+                const val = prs[k];
+                const config = cardMap[k];
+
+                const prDisplay = val > 0 ? `${val} <span class="text-xs font-normal text-gray-400">kg</span>` : `0 <span class="text-xs font-normal text-gray-400">kg</span>`;
+                document.getElementById(config.pr).innerHTML = prDisplay;
+                document.getElementById(config.sub).innerText = val > 0 ? `Top PR Record` : `No lifts yet`;
+                document.getElementById(config.footer).innerText = val > 0 ? `${val} kg` : '—';
+            });
+        }
+
+        function openResetModal() {
+            const modal = document.getElementById('resetModal');
+            const content = document.getElementById('resetModalContent');
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.classList.add('opacity-100');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }
+
+        function closeResetModal() {
+            const modal = document.getElementById('resetModal');
+            const content = document.getElementById('resetModalContent');
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            modal.classList.remove('opacity-100');
+            content.classList.add('scale-95');
+            content.classList.remove('scale-100');
+        }
+
+        function confirmReset() {
+            appData = { hits: {}, lifts: {} };
+            localStorage.removeItem('IRONLOG_CYCLE_DATA_V1');
+            
+            renderDailyHitsTable();
+            renderMajorLiftsTable();
+            updateAllStats();
+            closeResetModal();
+        }
+    </script>
+</body>
+</html>
